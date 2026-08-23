@@ -34,12 +34,12 @@ Linux AppImage releases do not require an OS vendor certificate. Their integrity
 Update the version in `package.json` and `package-lock.json`, commit it, then create and push a matching tag:
 
 ```bash
-git tag v0.2.0
-git push origin v0.2.0
+git tag v0.2.1
+git push origin v0.2.1
 ```
 
 The workflow builds all installers and creates the GitHub release. Verify a downloaded artifact with:
 
 ```bash
-gh attestation verify "HPC LLM Desktop-0.2.0-arm64.dmg" -R rahulsharma-rs/hpc-llm-desktop
+gh attestation verify "hpc-llm-desktop-0.2.1-mac-arm64.dmg" -R rahulsharma-rs/hpc-llm-desktop
 ```

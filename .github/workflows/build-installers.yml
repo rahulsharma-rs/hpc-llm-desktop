@@ -22,9 +22,9 @@ jobs:
     runs-on: ubuntu-24.04
     steps:
       - name: Check out source
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
       - name: Set up Node.js
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v7
         with:
           node-version: 22
           cache: npm
@@ -53,9 +53,9 @@ jobs:
       HAS_MAC_CERTIFICATE: ${{ secrets.MAC_CSC_LINK != '' }}
     steps:
       - name: Check out source
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
       - name: Set up Node.js
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v7
         with:
           node-version: 22
           cache: npm
@@ -84,7 +84,7 @@ jobs:
         if: env.HAS_MAC_CERTIFICATE != 'true'
         run: echo "Apple signing secrets are not configured; publishing an unsigned build with provenance."
       - name: Write checksums
-        run: shasum -a 256 dist/*.dmg dist/*-mac.zip > "dist/SHA256SUMS-macos-${{ matrix.arch }}.txt"
+        run: shasum -a 256 dist/*.dmg dist/*.zip > "dist/SHA256SUMS-macos-${{ matrix.arch }}.txt"
       - name: Attest DMG provenance
         uses: actions/attest@v4
         with:
@@ -92,14 +92,14 @@ jobs:
       - name: Attest ZIP provenance
         uses: actions/attest@v4
         with:
-          subject-path: dist/*-mac.zip
+          subject-path: dist/*.zip
       - name: Upload installers
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: installers-macos-${{ matrix.arch }}
           path: |
             dist/*.dmg
-            dist/*-mac.zip
+            dist/*.zip
             dist/SHA256SUMS-macos-${{ matrix.arch }}.txt
           if-no-files-found: error
           retention-days: 14
@@ -113,9 +113,9 @@ jobs:
       HAS_WINDOWS_CERTIFICATE: ${{ secrets.WIN_CSC_LINK != '' }}
     steps:
       - name: Check out source
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
       - name: Set up Node.js
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v7
         with:
           node-version: 22
           cache: npm
@@ -159,7 +159,7 @@ jobs:
         with:
           subject-path: dist/*.exe
       - name: Upload installer
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: installers-windows-x64
           path: |
@@ -175,9 +175,9 @@ jobs:
     runs-on: ubuntu-24.04
     steps:
       - name: Check out source
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
       - name: Set up Node.js
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v7
         with:
           node-version: 22
           cache: npm
@@ -192,7 +192,7 @@ jobs:
         with:
           subject-path: dist/*.AppImage
       - name: Upload installer
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: installers-linux-x64
           path: |
@@ -212,14 +212,14 @@ jobs:
       attestations: write
     steps:
       - name: Download installers
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v8
         with:
           pattern: installers-*
           path: release
           merge-multiple: true
       - name: Write release checksums
         run: |
-          find release -maxdepth 1 -type f \( -name '*.dmg' -o -name '*-mac.zip' -o -name '*.exe' -o -name '*.AppImage' \) -print0 \
+          find release -maxdepth 1 -type f \( -name '*.dmg' -o -name '*.zip' -o -name '*.exe' -o -name '*.AppImage' \) -print0 \
             | sort -z \
             | xargs -0 sha256sum \
             | sed 's#release/##' > release/SHA256SUMS.txt

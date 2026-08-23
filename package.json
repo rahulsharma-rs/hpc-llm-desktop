@@ -1,6 +1,6 @@
 {
   "name": "hpc-llm-desktop",
-  "version": "0.2.0",
+  "version": "0.2.1",
   "private": true,
   "description": "Desktop and browser client for running LLMs on Slurm-based HPC clusters",
   "author": "Rahul Sharma",
@@ -43,6 +43,7 @@
       "output": "dist"
     },
     "mac": {
+      "artifactName": "hpc-llm-desktop-${version}-mac-${arch}.${ext}",
       "category": "public.app-category.developer-tools",
       "target": [
         "dmg",
@@ -50,9 +51,11 @@
       ]
     },
     "win": {
+      "artifactName": "hpc-llm-desktop-${version}-windows-${arch}.${ext}",
       "target": "nsis"
     },
     "linux": {
+      "artifactName": "hpc-llm-desktop-${version}-linux-${arch}.${ext}",
       "category": "Development",
       "target": "AppImage"
     }
