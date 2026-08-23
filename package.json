@@ -1,0 +1,63 @@
+{
+  "name": "hpc-llm-desktop",
+  "version": "0.2.0",
+  "private": true,
+  "description": "Desktop and browser client for running LLMs on Slurm-based HPC clusters",
+  "author": "Rahul Sharma",
+  "license": "MIT",
+  "homepage": "https://github.com/rahulsharma-rs/hpc-llm-desktop#readme",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/rahulsharma-rs/hpc-llm-desktop.git"
+  },
+  "bugs": {
+    "url": "https://github.com/rahulsharma-rs/hpc-llm-desktop/issues"
+  },
+  "main": "electron/main.cjs",
+  "scripts": {
+    "start": "electron .",
+    "browser": "node electron/server.cjs --open-browser",
+    "package": "electron-builder --dir",
+    "dist": "electron-builder",
+    "test": "node --test electron/tests/*.test.cjs",
+    "check:secrets": "node scripts/check-no-secrets.cjs",
+    "check": "npm run check:secrets && npm test && node --check electron/main.cjs && node --check electron/server.cjs && node --check electron/web/app.js"
+  },
+  "dependencies": {
+    "ssh2": "^1.17.0"
+  },
+  "devDependencies": {
+    "electron": "^43.4.1",
+    "electron-builder": "^26.0.12"
+  },
+  "build": {
+    "appId": "org.hpc.llm.desktop",
+    "productName": "HPC LLM Desktop",
+    "icon": "electron/assets/icon.png",
+    "asar": true,
+    "files": [
+      "electron/**/*",
+      "package.json"
+    ],
+    "directories": {
+      "output": "dist"
+    },
+    "mac": {
+      "category": "public.app-category.developer-tools",
+      "target": [
+        "dmg",
+        "zip"
+      ]
+    },
+    "win": {
+      "target": "nsis"
+    },
+    "linux": {
+      "category": "Development",
+      "target": "AppImage"
+    }
+  },
+  "engines": {
+    "node": ">=22"
+  }
+}

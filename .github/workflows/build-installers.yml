@@ -1,0 +1,217 @@
+name: Build installers
+
+on:
+  push:
+    branches: [main]
+    tags: ["v*"]
+  pull_request:
+  workflow_dispatch:
+
+concurrency:
+  group: installers-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+  id-token: write
+  attestations: write
+
+jobs:
+  verify:
+    name: Test and audit
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Check out source
+        uses: actions/checkout@v4
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - name: Install dependencies
+        run: npm ci
+      - name: Run checks
+        run: npm run check
+      - name: Audit production dependencies
+        run: npm audit --omit=dev
+
+  macos:
+    name: macOS ${{ matrix.arch }}
+    if: github.event_name != 'pull_request'
+    needs: verify
+    runs-on: macos-15
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - arch: arm64
+            argument: --arm64
+          - arch: x64
+            argument: --x64
+    env:
+      CSC_LINK: ${{ secrets.MAC_CSC_LINK }}
+      CSC_KEY_PASSWORD: ${{ secrets.MAC_CSC_KEY_PASSWORD }}
+      APPLE_ID: ${{ secrets.APPLE_ID }}
+      APPLE_APP_SPECIFIC_PASSWORD: ${{ secrets.APPLE_APP_SPECIFIC_PASSWORD }}
+      APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+      CSC_IDENTITY_AUTO_DISCOVERY: ${{ secrets.MAC_CSC_LINK != '' }}
+      HAS_MAC_CERTIFICATE: ${{ secrets.MAC_CSC_LINK != '' }}
+    steps:
+      - name: Check out source
+        uses: actions/checkout@v4
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - name: Install dependencies
+        run: npm ci
+      - name: Build installer
+        run: npx electron-builder --mac ${{ matrix.argument }} --publish never
+      - name: Verify Apple signature
+        if: env.HAS_MAC_CERTIFICATE == 'true'
+        run: find dist -maxdepth 3 -name '*.app' -exec codesign --verify --deep --strict --verbose=2 {} \;
+      - name: Record unsigned status
+        if: env.HAS_MAC_CERTIFICATE != 'true'
+        run: echo "Apple signing secrets are not configured; publishing an unsigned build with provenance."
+      - name: Write checksums
+        run: shasum -a 256 dist/*.dmg dist/*-mac.zip > "dist/SHA256SUMS-macos-${{ matrix.arch }}.txt"
+      - name: Attest DMG provenance
+        uses: actions/attest@v4
+        with:
+          subject-path: dist/*.dmg
+      - name: Attest ZIP provenance
+        uses: actions/attest@v4
+        with:
+          subject-path: dist/*-mac.zip
+      - name: Upload installers
+        uses: actions/upload-artifact@v4
+        with:
+          name: installers-macos-${{ matrix.arch }}
+          path: |
+            dist/*.dmg
+            dist/*-mac.zip
+            dist/SHA256SUMS-macos-${{ matrix.arch }}.txt
+          if-no-files-found: error
+          retention-days: 14
+
+  windows:
+    name: Windows x64
+    if: github.event_name != 'pull_request'
+    needs: verify
+    runs-on: windows-2025
+    env:
+      CSC_LINK: ${{ secrets.WIN_CSC_LINK }}
+      CSC_KEY_PASSWORD: ${{ secrets.WIN_CSC_KEY_PASSWORD }}
+      HAS_WINDOWS_CERTIFICATE: ${{ secrets.WIN_CSC_LINK != '' }}
+    steps:
+      - name: Check out source
+        uses: actions/checkout@v4
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - name: Install dependencies
+        run: npm ci
+      - name: Build installer
+        run: npx electron-builder --win --x64 --publish never
+      - name: Verify Authenticode signature
+        if: env.HAS_WINDOWS_CERTIFICATE == 'true'
+        shell: pwsh
+        run: |
+          $installers = Get-ChildItem dist -Filter *.exe
+          foreach ($installer in $installers) {
+            $signature = Get-AuthenticodeSignature $installer.FullName
+            if ($signature.Status -ne "Valid") {
+              throw "Invalid Authenticode signature for $($installer.Name): $($signature.Status)"
+            }
+          }
+      - name: Record unsigned status
+        if: env.HAS_WINDOWS_CERTIFICATE != 'true'
+        run: echo "Windows signing secrets are not configured; publishing an unsigned build with provenance."
+      - name: Write checksums
+        shell: pwsh
+        run: |
+          $lines = Get-ChildItem dist -Filter *.exe | ForEach-Object {
+            $hash = (Get-FileHash $_.FullName -Algorithm SHA256).Hash.ToLower()
+            "$hash  $($_.Name)"
+          }
+          $lines | Set-Content dist/SHA256SUMS-windows-x64.txt
+      - name: Attest build provenance
+        uses: actions/attest@v4
+        with:
+          subject-path: dist/*.exe
+      - name: Upload installer
+        uses: actions/upload-artifact@v4
+        with:
+          name: installers-windows-x64
+          path: |
+            dist/*.exe
+            dist/SHA256SUMS-windows-x64.txt
+          if-no-files-found: error
+          retention-days: 14
+
+  linux:
+    name: Linux x64
+    if: github.event_name != 'pull_request'
+    needs: verify
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Check out source
+        uses: actions/checkout@v4
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - name: Install dependencies
+        run: npm ci
+      - name: Build installer
+        run: npx electron-builder --linux AppImage --x64 --publish never
+      - name: Write checksums
+        run: sha256sum dist/*.AppImage > dist/SHA256SUMS-linux-x64.txt
+      - name: Attest build provenance
+        uses: actions/attest@v4
+        with:
+          subject-path: dist/*.AppImage
+      - name: Upload installer
+        uses: actions/upload-artifact@v4
+        with:
+          name: installers-linux-x64
+          path: |
+            dist/*.AppImage
+            dist/SHA256SUMS-linux-x64.txt
+          if-no-files-found: error
+          retention-days: 14
+
+  release:
+    name: Publish GitHub release
+    if: startsWith(github.ref, 'refs/tags/v')
+    needs: [macos, windows, linux]
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: write
+      id-token: write
+      attestations: write
+    steps:
+      - name: Download installers
+        uses: actions/download-artifact@v4
+        with:
+          pattern: installers-*
+          path: release
+          merge-multiple: true
+      - name: Write release checksums
+        run: |
+          find release -maxdepth 1 -type f \( -name '*.dmg' -o -name '*-mac.zip' -o -name '*.exe' -o -name '*.AppImage' \) -print0 \
+            | sort -z \
+            | xargs -0 sha256sum \
+            | sed 's#release/##' > release/SHA256SUMS.txt
+      - name: Attest release checksums
+        uses: actions/attest@v4
+        with:
+          subject-path: release/SHA256SUMS.txt
+      - name: Create release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh release create "$GITHUB_REF_NAME" release/* --generate-notes --verify-tag --repo "$GITHUB_REPOSITORY"

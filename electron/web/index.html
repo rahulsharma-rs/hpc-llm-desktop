@@ -1,0 +1,330 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="color-scheme" content="light">
+    <title>HPC LLM Desktop</title>
+    <link rel="icon" href="/icon.png">
+    <link rel="stylesheet" href="/styles.css">
+  </head>
+  <body>
+    <div class="app-shell">
+      <aside class="sidebar" aria-label="Primary navigation">
+        <div class="brand">
+          <span class="brand-mark" aria-hidden="true"><img src="/icon.png" alt=""></span>
+          <span>
+            <strong>HPC LLM Desktop</strong>
+            <small>Cluster model client</small>
+          </span>
+        </div>
+        <nav class="nav-list">
+          <button class="nav-item is-active" type="button" data-view="dashboard" aria-current="page">
+            Dashboard
+          </button>
+          <button class="nav-item" type="button" data-view="models">Models</button>
+          <button class="nav-item" type="button" data-view="account">Account</button>
+        </nav>
+        <div class="sidebar-footer">
+          <span class="surface-indicator">Electron + browser</span>
+          <small>Loopback-only control service</small>
+        </div>
+      </aside>
+
+      <main class="main-shell">
+        <header class="topbar">
+          <div>
+            <p class="eyebrow" id="view-eyebrow">HPC WORKSPACE</p>
+            <h1 id="view-title">Dashboard</h1>
+          </div>
+          <div class="topbar-actions">
+            <span class="connection-state is-neutral" id="connection-state" data-testid="connection-state">
+              Not checked
+            </span>
+            <button class="button button-secondary" id="refresh-all" type="button">Refresh</button>
+          </div>
+        </header>
+
+        <div class="workspace-grid">
+          <div class="view-stack">
+            <section class="app-view is-active" id="view-dashboard" aria-labelledby="view-title">
+              <div class="status-grid" aria-label="Connection summary">
+                <div class="status-item">
+                  <span class="status-label">HPC</span>
+                  <strong id="hpc-summary">Not checked</strong>
+                  <small id="hpc-detail">Save an account to connect</small>
+                </div>
+                <div class="status-item">
+                  <span class="status-label">Selected session</span>
+                  <strong id="session-summary">None</strong>
+                  <small id="session-detail">Choose a session from the table</small>
+                </div>
+                <div class="status-item">
+                  <span class="status-label">Local endpoint</span>
+                  <strong id="tunnel-summary">Tunnel stopped</strong>
+                  <small id="endpoint-url">http://127.0.0.1:11435/v1</small>
+                </div>
+              </div>
+
+              <section class="section-block" aria-labelledby="launch-heading">
+                <div class="section-heading">
+                  <div>
+                    <h2 id="launch-heading">Launch configuration</h2>
+                    <p>Submit a managed llama-server GGUF session to your HPC cluster.</p>
+                  </div>
+                </div>
+                <form id="launch-form" class="form-grid">
+                  <label>
+                    <span>Server</span>
+                    <select id="backend-choice" name="backend"></select>
+                  </label>
+                  <label class="field-wide">
+                    <span>Model</span>
+                    <select id="model-choice" name="model" data-testid="model-select"></select>
+                  </label>
+                  <label>
+                    <span>Partition</span>
+                    <select id="queue-choice" name="queue"></select>
+                    <small id="queue-note"></small>
+                  </label>
+                  <label>
+                    <span>Runtime</span>
+                    <select id="runtime-choice" name="runtime"></select>
+                  </label>
+                  <label>
+                    <span>Resources</span>
+                    <select id="resource-choice" name="resource"></select>
+                  </label>
+                  <label>
+                    <span>Context</span>
+                    <select id="context-choice" name="context"></select>
+                  </label>
+                </form>
+                <div class="launch-status" id="launch-status" data-state="untested" role="status" aria-live="polite">
+                  <div>
+                    <span>SCHEDULER CHECK</span>
+                    <strong id="launch-status-title">Not tested</strong>
+                  </div>
+                  <p id="launch-status-copy">Recommended settings will be applied when the model inventory loads.</p>
+                </div>
+                <div class="command-row command-row-wrap">
+                  <button class="button button-primary" id="start-session" type="button">Start LLM session</button>
+                  <button class="button button-secondary" id="test-configuration" type="button">Test configuration</button>
+                  <button class="button button-secondary" id="restore-defaults" type="button">Use recommended defaults</button>
+                  <button class="button button-secondary" id="refresh-sessions" type="button">Refresh sessions</button>
+                </div>
+              </section>
+
+              <section class="section-block sessions-block" aria-labelledby="sessions-heading">
+                <div class="section-heading">
+                  <div>
+                    <h2 id="sessions-heading">Active sessions</h2>
+                    <p id="sessions-copy">No sessions loaded.</p>
+                  </div>
+                  <div class="selection-actions">
+                    <button class="button button-secondary" id="connect-tunnel" type="button" disabled>
+                      Connect tunnel
+                    </button>
+                    <button class="button button-secondary" id="stop-tunnel" type="button" disabled>
+                      Stop tunnel
+                    </button>
+                    <button class="button button-secondary" id="configure-opencode" type="button" disabled>
+                      Configure OpenCode
+                    </button>
+                    <button class="button button-danger" id="cancel-session" type="button" disabled>
+                      Cancel session
+                    </button>
+                  </div>
+                </div>
+                <div class="table-wrap">
+                  <table>
+                    <thead>
+                      <tr>
+                        <th scope="col">Job</th>
+                        <th scope="col">Backend</th>
+                        <th scope="col">Model</th>
+                        <th scope="col">State</th>
+                        <th scope="col">Node / reason</th>
+                        <th scope="col">Time left</th>
+                      </tr>
+                    </thead>
+                    <tbody id="sessions-body" data-testid="sessions-table">
+                      <tr><td class="empty-cell" colspan="6">Refresh to load HPC sessions.</td></tr>
+                    </tbody>
+                  </table>
+                </div>
+              </section>
+            </section>
+
+            <section class="app-view" id="view-models" aria-labelledby="models-heading">
+              <section class="section-block model-inventory" aria-labelledby="models-heading">
+                <div class="section-heading">
+                  <div>
+                    <p class="eyebrow">PERSISTENT STORAGE</p>
+                    <h2 id="models-heading">Models in HPC home</h2>
+                    <p id="model-count">Model inventory has not been loaded.</p>
+                  </div>
+                  <button class="button button-secondary" id="refresh-models" type="button">Refresh models</button>
+                </div>
+                <div class="table-wrap">
+                  <table>
+                    <thead>
+                      <tr>
+                        <th scope="col">Model</th>
+                        <th scope="col">Size</th>
+                        <th scope="col">Storage</th>
+                        <th scope="col">Default context</th>
+                      </tr>
+                    </thead>
+                    <tbody id="models-body" data-testid="models-table">
+                      <tr><td class="empty-cell" colspan="4">Refresh to discover models.</td></tr>
+                    </tbody>
+                  </table>
+                </div>
+              </section>
+
+              <section class="section-block" aria-labelledby="add-models-heading">
+                <div class="section-heading">
+                  <div>
+                    <h2 id="add-models-heading">Add a model</h2>
+                    <p>Downloads go to persistent HPC home storage, not temporary scratch.</p>
+                  </div>
+                </div>
+                <div class="model-actions">
+                  <button class="model-action" type="button" data-download="qwen38">
+                    <strong>Qwen3.8 27B</strong><span>Official GGML Q4_K_M</span><small data-install-status="qwen38">Checking...</small>
+                  </button>
+                  <button class="model-action" type="button" data-download="qwen36">
+                    <strong>Qwen3.6 35B</strong><span>UD-Q4_K_M coding model</span><small data-install-status="qwen36">Checking...</small>
+                  </button>
+                  <button class="model-action" type="button" data-download="starter">
+                    <strong>Starter models</strong><span>Qwen coder GGUF set</span><small data-install-status="starter">Checking...</small>
+                  </button>
+                  <button class="model-action" type="button" data-download="gpt_oss">
+                    <strong>GPT-OSS 120B</strong><span>Two-part Q4_K_M</span><small data-install-status="gpt_oss">Checking...</small>
+                  </button>
+                  <button class="model-action" type="button" data-download="glm52">
+                    <strong>GLM-5.2</strong><span>Six-part UD-IQ1_M</span><small data-install-status="glm52">Checking...</small>
+                  </button>
+                </div>
+                <div class="install-progress" id="install-progress" role="status" aria-live="polite" hidden>
+                  <div class="install-progress-heading">
+                    <div>
+                      <strong id="install-progress-title">Installing model</strong>
+                      <span id="install-progress-state">Queued</span>
+                    </div>
+                    <output id="install-progress-percent">0%</output>
+                  </div>
+                  <progress id="install-progress-bar" max="100" value="0">0%</progress>
+                  <p id="install-progress-message">Waiting to connect to the HPC.</p>
+                  <p class="install-progress-error" id="install-progress-error" hidden></p>
+                </div>
+                <div class="install-status" id="install-status" aria-live="polite"></div>
+              </section>
+            </section>
+
+            <section class="app-view" id="view-account" aria-labelledby="account-heading">
+              <section class="section-block" aria-labelledby="account-heading">
+                <div class="section-heading">
+                  <div>
+                    <p class="eyebrow">LOCAL SETTINGS</p>
+                    <h2 id="account-heading">HPC account</h2>
+                    <p>Password input is used only for first-time key deployment and is never saved.</p>
+                  </div>
+                </div>
+                <form id="account-form" class="form-grid account-grid">
+                  <label>
+                    <span>Username</span>
+                    <input id="username" name="username" autocomplete="username">
+                  </label>
+                  <label>
+                    <span>Remote host</span>
+                    <input id="remote-host" name="remote_host" autocomplete="off">
+                  </label>
+                  <label>
+                    <span>SSH port</span>
+                    <input id="ssh-port" name="ssh_port" type="number" min="1" max="65535">
+                  </label>
+                  <label class="field-wide">
+                    <span>SSH private key</span>
+                    <input id="private-key-path" name="private_key_path" autocomplete="off">
+                  </label>
+                  <label class="field-wide">
+                    <span>Remote work directory</span>
+                    <input id="remote-workdir" name="remote_workdir" autocomplete="off">
+                  </label>
+                  <label>
+                    <span>Local endpoint port</span>
+                    <input id="local-port" name="local_port" type="number" min="1" max="65535">
+                  </label>
+                  <label>
+                    <span>Remote model port</span>
+                    <input id="remote-port" name="remote_port" type="number" min="1" max="65535">
+                  </label>
+                  <label class="field-wide">
+                    <span>HPC password</span>
+                    <input id="hpc-password" name="password" type="password" autocomplete="current-password">
+                  </label>
+                  <label class="field-wide">
+                    <span>Hugging Face token</span>
+                    <input id="hf-token" name="hf_token" type="password" autocomplete="off" placeholder="hf_...">
+                  </label>
+                </form>
+                <div class="command-row command-row-wrap">
+                  <button class="button button-primary" id="save-account" type="button">Save settings</button>
+                  <button class="button button-secondary" id="test-account" type="button">Test SSH login</button>
+                  <button class="button button-secondary" id="generate-key" type="button">Create SSH key</button>
+                  <button class="button button-secondary" id="deploy-key" type="button">Deploy key</button>
+                  <button class="button button-secondary" id="fetch-fingerprint" type="button">Check fingerprint</button>
+                  <button class="button button-secondary" id="create-folder" type="button">Create remote folder</button>
+                  <button class="button button-secondary" id="save-hf-token" type="button">Deploy HF token</button>
+                  <button class="button button-secondary" id="verify-llama" type="button">Verify llama-server</button>
+                  <button class="button button-secondary" id="install-llama" type="button">Install llama-server</button>
+                </div>
+                <div class="fingerprint" id="fingerprint-status">No saved host fingerprint.</div>
+                <div class="storage-path" id="remote-storage-status">Connect to discover your persistent home model folder.</div>
+              </section>
+            </section>
+          </div>
+
+          <aside class="activity-panel" aria-labelledby="activity-heading">
+            <div class="activity-heading">
+              <div>
+                <p class="eyebrow">LIVE LOG</p>
+                <h2 id="activity-heading">Activity</h2>
+              </div>
+              <button class="text-button" id="clear-activity" type="button">Clear</button>
+            </div>
+            <ol id="activity-list" aria-live="polite">
+              <li class="activity-empty">App is ready.</li>
+            </ol>
+            <div class="endpoint-check">
+              <span>OpenAI-compatible endpoint</span>
+              <button class="button button-secondary" id="test-endpoint" type="button">Test endpoint</button>
+            </div>
+          </aside>
+        </div>
+      </main>
+    </div>
+
+    <dialog id="confirm-dialog">
+      <form method="dialog">
+        <h2 id="confirm-title">Confirm action</h2>
+        <p id="confirm-copy"></p>
+        <div class="dialog-actions">
+          <button class="button button-secondary" value="cancel">Cancel</button>
+          <button class="button button-primary" id="confirm-action" value="confirm">Continue</button>
+        </div>
+      </form>
+    </dialog>
+
+    <div class="busy-overlay" id="busy-overlay" hidden aria-live="assertive">
+      <div class="busy-indicator" role="status">
+        <span class="spinner" aria-hidden="true"></span>
+        <strong id="busy-label">Working...</strong>
+      </div>
+    </div>
+
+    <script src="/app.js" defer></script>
+  </body>
+</html>
