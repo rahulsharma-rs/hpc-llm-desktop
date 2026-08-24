@@ -15,7 +15,48 @@ The desktop and browser surfaces share one authenticated local service. The serv
 
 ## Download
 
-Installers for macOS ARM64/x64, Windows x64, and Linux x64 are published on the [GitHub Releases](https://github.com/rahulsharma-rs/hpc-llm-desktop/releases) page. Each release includes SHA-256 checksums and GitHub build-provenance attestations.
+Download the current stable release directly:
+
+| Platform | Installer | Alternative |
+| --- | --- | --- |
+| macOS Apple Silicon (M1 or newer) | [`hpc-llm-desktop-0.2.1-mac-arm64.dmg`](https://github.com/rahulsharma-rs/hpc-llm-desktop/releases/download/v0.2.1/hpc-llm-desktop-0.2.1-mac-arm64.dmg) | [`hpc-llm-desktop-0.2.1-mac-arm64.zip`](https://github.com/rahulsharma-rs/hpc-llm-desktop/releases/download/v0.2.1/hpc-llm-desktop-0.2.1-mac-arm64.zip) |
+| macOS Intel | [`hpc-llm-desktop-0.2.1-mac-x64.dmg`](https://github.com/rahulsharma-rs/hpc-llm-desktop/releases/download/v0.2.1/hpc-llm-desktop-0.2.1-mac-x64.dmg) | [`hpc-llm-desktop-0.2.1-mac-x64.zip`](https://github.com/rahulsharma-rs/hpc-llm-desktop/releases/download/v0.2.1/hpc-llm-desktop-0.2.1-mac-x64.zip) |
+| Windows x64 | [`hpc-llm-desktop-0.2.1-windows-x64.exe`](https://github.com/rahulsharma-rs/hpc-llm-desktop/releases/download/v0.2.1/hpc-llm-desktop-0.2.1-windows-x64.exe) | - |
+| Linux x86-64 | [`hpc-llm-desktop-0.2.1-linux-x86_64.AppImage`](https://github.com/rahulsharma-rs/hpc-llm-desktop/releases/download/v0.2.1/hpc-llm-desktop-0.2.1-linux-x86_64.AppImage) | - |
+
+Use [`SHA256SUMS.txt`](https://github.com/rahulsharma-rs/hpc-llm-desktop/releases/download/v0.2.1/SHA256SUMS.txt) to verify the downloaded file. The [v0.2.1 release page](https://github.com/rahulsharma-rs/hpc-llm-desktop/releases/tag/v0.2.1) also provides GitHub build-provenance attestations and platform-specific checksums.
+
+The current macOS and Windows files are unsigned and may display an operating-system trust warning. Verify the checksum and provenance before running them. See [Releasing](docs/RELEASING.md) for the signing status and certificate requirements.
+
+On Linux, make the AppImage executable before opening it:
+
+```bash
+chmod +x hpc-llm-desktop-0.2.1-linux-x86_64.AppImage
+./hpc-llm-desktop-0.2.1-linux-x86_64.AppImage
+```
+
+## Connect To An HPC
+
+1. Confirm that the computer is on a network permitted to reach the HPC. When off-site, connect to the institution's VPN before continuing.
+2. Start HPC LLM Desktop and open the **Account** view.
+3. Enter the HPC **Username**, **Remote host**, and **SSH port** supplied by the HPC administrator. SSH normally uses port `22`, but the institution's documented value is authoritative.
+4. Enter the local path to an existing **SSH private key**. To create a dedicated key instead, keep the suggested path and select **Create SSH key**.
+5. Select **Save settings**.
+6. Select **Check fingerprint**, then compare the displayed fingerprint with the value published by the HPC provider or supplied by its administrator before trusting it.
+7. If the public key is not already installed on the HPC, enter the HPC account password and select **Deploy key**. The password is used for this request only, cleared from the form afterward, and never saved.
+8. Select **Test SSH login**. A successful test displays the remote username, hostname, and persistent model directory.
+9. Select **Create remote folder** to initialize the runtime and model directories in the HPC home space.
+10. If a model requires Hugging Face authentication, enter the token and select **Deploy HF token**. The token is transferred to the HPC and is not stored in the local app configuration.
+11. Select **Verify llama-server**. If it is unavailable, select **Install llama-server**, then verify it again before installing a model or starting a session.
+
+### Connection Troubleshooting
+
+| Error | What to check |
+| --- | --- |
+| Connection refused, timed out, or host unreachable | First confirm the remote host and SSH port. If they are correct, the current network probably cannot access the HPC. Switch to an authorized institutional network or connect to the institution's VPN, then retry. |
+| Host could not be resolved | Check the hostname for spelling errors. Institutional DNS may also require an authorized network or VPN connection. |
+| SSH authentication rejected | The HPC was reached, but it rejected the credentials. Check the username and private-key path, and confirm that the matching public key is installed in the HPC account. |
+| Host-key fingerprint changed | Do not replace the saved fingerprint until the HPC provider confirms the new fingerprint. An unexpected change can indicate the wrong host or a security problem. |
 
 ## Run From Source
 
